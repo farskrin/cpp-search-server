@@ -58,9 +58,6 @@ enum class DocumentStatus {
     REMOVED,
 };
 
-//Default parameter for template<typename KeyMapper>
-auto default_parameter = [](int document_id, DocumentStatus status, int rating) { return status == DocumentStatus::ACTUAL; };
-
 class SearchServer {
 public:
     void SetStopWords(const string& text) {
@@ -77,13 +74,11 @@ public:
             word_to_document_freqs_[word][document_id] += inv_word_count;
         }
         documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
-    }
-        
+    }        
     
-    //TODO: add filter-predicat //input: id, status, rating //output:bool
-    template<typename KeyMapper = decltype(default_parameter)>
+    template<typename KeyMapper>
     vector<Document> FindTopDocuments(const string& raw_query,
-                                      KeyMapper key_mapper = default_parameter) const {
+                                      KeyMapper key_mapper) const {
         const Query query = ParseQuery(raw_query);
         auto matched_documents = FindAllDocuments(query, key_mapper);
 
