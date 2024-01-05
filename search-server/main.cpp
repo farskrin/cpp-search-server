@@ -114,6 +114,7 @@ public:
             word_to_document_freqs_[word][document_id] += inv_word_count;
         }
         documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
+        documents_id_.push_back(document_id);
     }
 
     template <typename DocumentPredicate>
@@ -125,9 +126,8 @@ public:
              [](const Document& lhs, const Document& rhs) {
                  if (abs(lhs.relevance - rhs.relevance) < EPSILON) {
                      return lhs.rating > rhs.rating;
-                 } else {
-                     return lhs.relevance > rhs.relevance;
-                 }
+                 } 
+				 return lhs.relevance > rhs.relevance;                 
              });
         if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
             matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
@@ -151,12 +151,7 @@ public:
     }
 
     int GetDocumentId(int index) const {
-        if (index < 0 || index > GetDocumentCount() - 1) {
-            throw out_of_range("Document index is out of range");
-        }
-        auto it = documents_.begin();
-        auto nx = std::next(it, index);
-        return nx->first;            
+        return documents_id_.at(index);
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
@@ -194,6 +189,7 @@ private:
     const set<string> stop_words_;
     map<string, map<int, double>> word_to_document_freqs_;
     map<int, DocumentData> documents_;
+    vector<int> documents_id_;
 
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
@@ -227,6 +223,12 @@ private:
     };
 
     QueryWord ParseQueryWord(string text) const {
+        if (text.empty()) {
+            throw invalid_argument("Query word is empty");
+        }
+        if (!IsValidWord(text)) {
+            throw invalid_argument("Query word contain invalid symbol");
+        }
         bool is_minus = false;        
         if (text[0] == '-') {
             if (text.size() > 1) {
@@ -250,11 +252,7 @@ private:
 
     Query ParseQuery(const string& text) const {
         Query query;
-        for (const string& word : SplitIntoWords(text)) {
-            if (!IsValidWord(word)) {
-                throw invalid_argument("Word contain invalid symbol");
-            }
-
+        for (const string& word : SplitIntoWords(text)) { 
             const auto query_word = ParseQueryWord(word);
 
             if (!query_word.is_stop) {
